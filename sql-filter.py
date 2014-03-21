@@ -3,6 +3,10 @@
 """
 sql-filter.py
 
+Exits cleanly if no filtering required
+Exits with errno=1 if query was filtered
+Exits with errno=2 if something else went wrong
+
 Created by Niall Kavanagh on 3/20/2014
 """
 
@@ -28,31 +32,77 @@ def is_token_allowed(token):
     return is_allowed
 
 
-def filter_token(token):
-    if token.is_group():
-        child = token.token_first()
+def filter_token_group(group):
+    filtered_group = group
+    child = group.token_first()
 
-        # to hold children that aren't blacklisted
-        good_children = []
+    # to hold children that aren't blacklisted
+    good_children = []
 
-        while child:
-            filtered_child = filter_token(child)
-            if filtered_child is not None:
-                good_children.append(filtered_child.value)
+    was_filtered = False
 
-            idx = token.token_index(child)
-            child = token.token_next(idx, skip_ws=True)
+    while child:
+        filtered_child = filter_token(child)
 
+        if filtered_child:
+            good_children.append(filtered_child)
+            if filtered_child.value != child.value:
+                was_filtered = True
+        else:
+            was_filtered = True
+
+        idx = group.token_index(child)
+        child = group.token_next(idx, skip_ws=True)
+
+    if was_filtered:
         if len(good_children) > 0:
-            token = sqlparse.sql.Token(None, ' '.join(good_children))
-            return token
+            # tokens as strings
+            tokens = ' '.join(str(tok) for tok in good_children)
+            filtered_group = sqlparse.sql.Token(None, tokens)
         else:
-            return None
+            filtered_group = None
+
+    return filtered_group
+
+
+def filter_token(token):
+    filtered_token = token
+
+    if token.is_group():
+        filtered_token = filter_token_group(token)
+    elif not is_token_allowed(token):
+        filtered_token = None
+
+    return filtered_token
+
+
+def filter_statement(statement):
+    was_filtered = False
+    filtered_parts = []
+
+    token = statement.token_first()
+
+    while token:
+        filtered_token = filter_token(token)
+
+        if token != filtered_token:
+            was_filtered = True
+
+        if filtered_token is not None:
+            filtered_parts.append(filtered_token.value)
+
+        idx = statement.token_index(token)
+        token = statement.token_next(idx, skip_ws=True)
+
+    filtered_sql = ''
+
+    if len(filtered_parts) > 0:
+        filtered_sql = ' '.join(filtered_parts)
+
+    if was_filtered:
+        return filtered_sql
     else:
-        if is_token_allowed(token):
-            return token
-        else:
-            return None
+        return statement
 
 
 def main():
@@ -75,11 +125,12 @@ def main():
     if not os.path.isfile(args.filename):
         print('File not found: {0}'.format(args.filename),
               file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
 
     if not os.path.isfile(args.blacklist):
         print('Blacklist not found: {0}'.format(args.blacklist),
               file=sys.stderr)
+        sys.exit(2)
 
     # load the blacklist
     with open(args.blacklist) as f:
@@ -91,28 +142,23 @@ def main():
         original_sql = sql_file.read().replace('\n', '')
 
     statements = sqlparse.parse(original_sql)
+    was_filtered = False
 
     for statement in statements:
-        print('{0}: {1}'.format(statement.get_type(), statement))
+        filtered_statement = filter_statement(statement)
 
-        filtered_parts = []
+        if filtered_statement != statement:
+            print(filtered_statement)
+            was_filtered = True
+        else:
+            print(statement)
 
-        token = statement.token_first()
-
-        while token:
-            filtered_token = filter_token(token)
-            if filtered_token is not None:
-                filtered_parts.append(filtered_token.value)
-
-            idx = statement.token_index(token)
-            token = statement.token_next(idx, skip_ws=True)
-
-        filtered_query = ''
-
-        if len(filtered_parts) > 0:
-            filtered_query = ' '.join(filtered_parts)
-
-        print('Filtered: {0}'.format(filtered_query))
+    if was_filtered:
+        # we filtered, exit code 1
+        sys.exit(1)
+    else:
+        # exit cleanly
+        sys.exit(0)
 
 if __name__ == '__main__':
     main()
