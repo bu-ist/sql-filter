@@ -12,12 +12,20 @@ import sqlparse
 import os
 import sys
 
+# global to hold blacklist
+blacklisted_tokens = []
+
 
 def is_token_allowed(token):
-    if token.value.upper() == 'SLEEP':
-        return False
-    else:
-        return True
+    global blacklisted_tokens
+
+    is_allowed = True
+
+    for invalid_token in blacklisted_tokens:
+        if token.value.upper() == invalid_token.upper():
+            is_allowed = False
+
+    return is_allowed
 
 
 def filter_token(token):
@@ -48,6 +56,8 @@ def filter_token(token):
 
 
 def main():
+    global blacklisted_tokens
+
     # command line args
     parser = argparse.ArgumentParser(description='Filters blacklisted \
                                      functions and keywords from a SQL \
@@ -71,6 +81,11 @@ def main():
         print('Blacklist not found: {0}'.format(args.blacklist),
               file=sys.stderr)
 
+    # load the blacklist
+    with open(args.blacklist) as f:
+        blacklisted_tokens = f.read().splitlines()
+
+    # parse the SQL
     original_sql = ''
     with open(args.filename, 'r') as sql_file:
         original_sql = sql_file.read().replace('\n', '')
