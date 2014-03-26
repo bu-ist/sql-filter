@@ -5,20 +5,6 @@ Implementation for the SQL filtering
 from sqlparse import sql
 
 
-def is_token_allowed(token, blacklisted_tokens):
-    """
-    Returns True if a token is allowed (the default), or False if the token
-    appears in the blacklist
-    """
-    is_allowed = True
-
-    for invalid_token in blacklisted_tokens:
-        if token.value.upper() == invalid_token.upper():
-            is_allowed = False
-
-    return is_allowed
-
-
 def filter_token_group(group, blacklisted_tokens):
     """
     Filters a list of tokens
@@ -63,7 +49,7 @@ def filter_token(token, blacklisted_tokens):
 
     if token.is_group():
         filtered_token = filter_token_group(token, blacklisted_tokens)
-    elif not is_token_allowed(token, blacklisted_tokens):
+    elif str(token).upper() in (s.upper() for s in blacklisted_tokens):
         filtered_token = None
 
     return filtered_token
