@@ -6,11 +6,12 @@ Created by Niall Kavanagh <ntk@bu.edu> on 3/26/2014
 
 __version__ = '0.1.0'
 
+from sqlparse import format
 from sqlparse import parse
 from sqlfilter import filter
 
 
-def filter_sql(sql, blacklisted_tokens):
+def filter_sql(sql, blacklisted_tokens, format_filtered=True):
     statements = parse(sql.replace('\n', ' '))
     was_filtered = False
     filtered_sql = ''
@@ -26,6 +27,11 @@ def filter_sql(sql, blacklisted_tokens):
             filtered_sql += str(statement)
 
     if was_filtered:
+        if format_filtered:
+            filtered_sql = format(filtered_sql,
+                                  reindent=True,
+                                  keyword_case='upper')
+
         return filtered_sql
     else:
         return sql
