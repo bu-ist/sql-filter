@@ -18,115 +18,12 @@ Created by Niall Kavanagh on 3/20/2014
 
 from __future__ import print_function
 import argparse
-import sqlparse
 import os
 import sys
-
-# global to hold blacklist
-blacklisted_tokens = []
-
-
-def is_token_allowed(token):
-    """
-    Returns True if a token is allowed (the default), or False if the token
-    appears in the blacklist
-    """
-    global blacklisted_tokens
-
-    is_allowed = True
-
-    for invalid_token in blacklisted_tokens:
-        if token.value.upper() == invalid_token.upper():
-            is_allowed = False
-
-    return is_allowed
-
-
-def filter_token_group(group):
-    """
-    Filters a list of tokens
-    """
-    filtered_group = group
-    child = group.token_first()
-
-    # to hold children that aren't blacklisted
-    good_children = []
-
-    was_filtered = False
-
-    while child:
-        filtered_child = filter_token(child)
-
-        if filtered_child:
-            good_children.append(filtered_child)
-            if filtered_child.value != child.value:
-                was_filtered = True
-        else:
-            was_filtered = True
-
-        idx = group.token_index(child)
-        child = group.token_next(idx, skip_ws=True)
-
-    if was_filtered:
-        if len(good_children) > 0:
-            # tokens as strings
-            tokens = ' '.join(str(tok) for tok in good_children)
-            filtered_group = sqlparse.sql.Token(None, tokens)
-        else:
-            filtered_group = None
-
-    return filtered_group
-
-
-def filter_token(token):
-    """
-    Filter a single token
-    """
-    filtered_token = token
-
-    if token.is_group():
-        filtered_token = filter_token_group(token)
-    elif not is_token_allowed(token):
-        filtered_token = None
-
-    return filtered_token
-
-
-def filter_statement(statement):
-    """
-    Filters a single statement
-    """
-    was_filtered = False
-    filtered_parts = []
-
-    token = statement.token_first()
-
-    while token:
-        filtered_token = filter_token(token)
-
-        if token != filtered_token:
-            was_filtered = True
-
-        if filtered_token is not None:
-            filtered_parts.append(filtered_token.value)
-
-        idx = statement.token_index(token)
-        token = statement.token_next(idx, skip_ws=True)
-
-    filtered_sql = ''
-
-    if len(filtered_parts) > 0:
-        filtered_sql = ' '.join(filtered_parts)
-
-    if was_filtered:
-        return filtered_sql
-    else:
-        return statement
+import sqlfilter
 
 
 def main():
-    global blacklisted_tokens
-
     # command line args
     parser = argparse.ArgumentParser(description='Filters blacklisted \
                                      functions and keywords from a SQL \
@@ -152,32 +49,28 @@ def main():
         sys.exit(2)
 
     # load the blacklist
+    blacklisted_tokens = []
     with open(args.blacklist) as f:
         blacklisted_tokens = f.read().splitlines()
 
     # parse the SQL
     original_sql = ''
     with open(args.filename, 'r') as sql_file:
-        original_sql = sql_file.read().replace('\n', '')
+        original_sql = sql_file.read()
 
-    statements = sqlparse.parse(original_sql)
-    was_filtered = False
+    filtered_sql = sqlfilter.filter_sql(original_sql, blacklisted_tokens)
 
-    for statement in statements:
-        filtered_statement = filter_statement(statement)
+    print('Original: {0}\n'.format(original_sql))
 
-        if filtered_statement != statement:
-            print(filtered_statement)
-            was_filtered = True
-        else:
-            print(statement)
+    # normal exit, no filtering peformed
+    errno = 0
 
-    if was_filtered:
-        # we filtered, exit code 1
-        sys.exit(1)
-    else:
-        # exit cleanly
-        sys.exit(0)
+    if filtered_sql != original_sql:
+        # abnormal exit, sql was filtered
+        print('Filtered: {0}\n'.format(filtered_sql))
+        errno = 1
+
+    sys.exit(errno)
 
 if __name__ == '__main__':
     main()
