@@ -1,6 +1,6 @@
-SQL Filtering POC
-=================
+SQL Filtering Module
+====================
 
-A script that accepts SQL as input and filters out functions and keywords that
+A module that accepts SQL as input and filters out functions and keywords that
 are blacklisted.
 
