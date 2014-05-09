@@ -16,5 +16,5 @@ setup(
     packages=['sqlfilter'],
     scripts=['scripts/sql-filter.py'],
     license='LICENSE',
-    install_requires=['sqlparse']
+    install_requires=['sqlparse>=0.1, <0.2']
 )
