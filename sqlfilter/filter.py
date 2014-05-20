@@ -33,7 +33,7 @@ def filter_token_group(group, blacklisted_tokens):
     if was_filtered:
         if len(good_children) > 0:
             # tokens as strings
-            tokens = ' '.join(str(tok) for tok in good_children)
+            tokens = ' '.join(unicode(tok) for tok in good_children)
             filtered_group = sql.Token(None, tokens)
         else:
             filtered_group = None
@@ -49,7 +49,7 @@ def filter_token(token, blacklisted_tokens):
 
     if token.is_group():
         filtered_token = filter_token_group(token, blacklisted_tokens)
-    elif str(token).upper() in (s.upper() for s in blacklisted_tokens):
+    elif unicode(token).upper() in (s.upper() for s in blacklisted_tokens):
         filtered_token = None
 
     return filtered_token
