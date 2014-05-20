@@ -24,7 +24,7 @@ def filter_sql(sql, blacklisted_tokens, format_filtered=True):
             was_filtered = True
             filtered_sql += filtered_statement
         else:
-            filtered_sql += str(statement)
+            filtered_sql += unicode(statement)
 
     if was_filtered:
         if format_filtered:
