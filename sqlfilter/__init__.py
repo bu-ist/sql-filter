@@ -4,7 +4,7 @@ Filters blacklisted tokens from a SQL statement.
 Created by Niall Kavanagh <ntk@bu.edu> on 3/26/2014
 """
 
-__version__ = '0.1.0'
+__version__ = '0.1.2'
 
 from sqlparse import format
 from sqlparse import parse
