@@ -7,7 +7,7 @@ except ImportError:
 
 setup(
     name='bu-sql-filter',
-    version='0.1.0',
+    version='0.1.2',
     author='Boston University',
     author_email='webteam@bu.edu',
     url='https://github.com/bu-ist/sql-filter/',
